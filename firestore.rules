@@ -1,0 +1,59 @@
+// File: firestore.rules
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- Regole per l'Estensione Stripe ---
+
+    match /customers/{uid} {
+      allow read: if request.auth.uid == uid;
+      match /checkout_sessions/{id} {
+        allow read, write: if request.auth.uid == uid;
+      }
+      match /subscriptions/{id} {
+        allow read: if request.auth.uid == uid;
+      }
+      match /payments/{id} {
+        allow read: if request.auth.uid == uid;
+      }
+      allow write: if false; // Utente non può scrivere direttamente qui
+    }
+
+    match /products/{id} {
+      allow read: if true;
+      allow write: if false;
+      match /prices/{id} {
+        allow read: if true;
+        allow write: if false;
+      }
+      match /tax_rates/{id} {
+        allow read: if true;
+        allow write: if false;
+      }
+    }
+
+     match /configuration/{id} {
+       allow read: if true;
+       allow write: if false;
+     }
+
+    // --- Tue Regole Esistenti (Integrate) ---
+
+    match /chats/{document} {
+      allow read, write: if true; // Mantenuta permissiva
+    }
+
+    match /users/{userId} {
+      // Utente può leggere/scrivere il proprio documento
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      // Sottocollezione Transactions (solo lettura per utente)
+      match /transactions/{transactionId} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow write: if false; // Solo backend scrive qui
+      }
+    }
+  }
+} 

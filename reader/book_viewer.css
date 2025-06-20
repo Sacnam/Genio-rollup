@@ -1,0 +1,236 @@
+/* reader/book_viewer.css */
+:root {
+    --viewer-bg-light: #f8f8f8;
+    --viewer-text-light: #222222;
+    --viewer-bg-dark: #282c34;
+    --viewer-text-dark: #dcdcdc;
+    --accent-color: #4a90e2;
+    --controls-bg: rgba(40, 40, 60, 0.9);
+    --controls-icon-color: #e0e0e0;
+    --panel-bg: #ffffff;
+    --panel-text: #333333;
+    --panel-border: #dddddd;
+
+    /* Per tema scuro dei pannelli */
+    --panel-bg-dark: #3a3f4b;
+    --panel-text-dark: #c5c8c6;
+    --panel-border-dark: #555;
+}
+
+body, html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+    background-color: var(--viewer-bg-light); /* Sfondo di base della pagina */
+    color: var(--viewer-text-light);
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+body.dark-theme {
+    background-color: var(--viewer-bg-dark);
+    color: var(--viewer-text-dark);
+}
+
+foliate-view {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+/* Controlli in Alto */
+.top-controls {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 10000;
+    background: var(--controls-bg);
+    padding: 8px 15px;
+    display: flex;
+    align-items: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.top-controls .spacer {
+    flex-grow: 1;
+}
+
+.top-controls button {
+    background: none;
+    border: none;
+    color: var(--controls-icon-color);
+    font-size: 1.3em;
+    cursor: pointer;
+    padding: 8px 10px;
+    line-height: 1;
+    transition: color 0.2s ease-in-out, transform 0.1s ease;
+    margin-left: 10px; /* Spazio tra i pulsanti a destra */
+}
+.top-controls button:first-child {
+    margin-left: 0;
+}
+
+.top-controls button:hover {
+    color: #ffffff;
+}
+.top-controls button:active {
+    transform: scale(0.95);
+}
+
+
+/* Controlli di Paginazione (in basso, potrebbero essere nascosti in modalità scroll) */
+.page-viewer-controls {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9000; /* Sotto i controlli top se si sovrappongono */
+    background: var(--controls-bg);
+    padding: 8px 15px;
+    border-radius: 30px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    display: flex; /* Inizialmente visibili, JS gestirà la visibilità */
+    gap: 25px;
+    align-items: center;
+}
+.page-viewer-controls.hidden {
+    display: none;
+}
+
+.page-viewer-controls button {
+    background: none;
+    border: none;
+    color: var(--controls-icon-color);
+    font-size: 1.6em;
+    cursor: pointer;
+    padding: 8px;
+    line-height: 1;
+    transition: color 0.2s ease-in-out, transform 0.1s ease;
+}
+.page-viewer-controls button:hover {
+    color: #ffffff;
+}
+.page-viewer-controls button:active {
+    transform: scale(0.95);
+}
+
+
+/* Pannello Laterale (per TOC, Note, ecc.) */
+.sidebar-panel {
+    position: fixed;
+    top: 0; /* Modificato: sotto i controlli superiori */
+    left: -350px; /* Inizialmente nascosto fuori schermo a sinistra */
+    width: 320px;
+    height: calc(100% - 45px); /* Altezza completa meno l'altezza dei controlli top */
+    margin-top: 45px; /* Spazio per i controlli top */
+    background-color: var(--panel-bg);
+    color: var(--panel-text);
+    border-right: 1px solid var(--panel-border);
+    box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+    z-index: 9500; /* Sopra foliate-view ma sotto i controlli principali se necessario */
+    overflow-y: auto;
+    transition: left 0.3s ease-in-out;
+    padding-bottom: 20px; /* Spazio in fondo */
+}
+
+.sidebar-panel.visible {
+    left: 0; /* Rende visibile */
+}
+
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    border-bottom: 1px solid var(--panel-border);
+    background-color: rgba(0,0,0,0.03); /* Leggero sfondo per header */
+}
+.panel-header h3 {
+    margin: 0;
+    font-size: 1.1em;
+}
+.close-panel-btn {
+    background: none;
+    border: none;
+    font-size: 1.2em;
+    cursor: pointer;
+    color: var(--panel-text);
+}
+
+#tocList {
+    list-style: none;
+    padding: 0 15px;
+}
+#tocList li {
+    margin: 8px 0;
+}
+#tocList a {
+    text-decoration: none;
+    color: var(--accent-color);
+    display: block;
+    padding: 5px 0;
+}
+#tocList a:hover {
+    text-decoration: underline;
+}
+#tocList ul { /* Sotto-liste */
+    list-style: none;
+    padding-left: 20px;
+    margin-top: 5px;
+}
+
+
+/* Tema Scuro per i Pannelli */
+body.dark-theme .sidebar-panel {
+    background-color: var(--panel-bg-dark);
+    color: var(--panel-text-dark);
+    border-right-color: var(--panel-border-dark);
+}
+body.dark-theme .panel-header {
+    border-bottom-color: var(--panel-border-dark);
+    background-color: rgba(255,255,255,0.03);
+}
+body.dark-theme .close-panel-btn {
+    color: var(--panel-text-dark);
+}
+body.dark-theme #tocList a {
+    color: var(--accent-color); /* Mantieni l'accento o scegli un colore diverso per dark */
+}
+
+
+/* Indicatore di caricamento */
+#loadingIndicator {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.2em;
+    color: var(--viewer-text-light);
+    background-color: rgba(255, 255, 255, 0.95);
+    padding: 20px 30px;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.15);
+    z-index: 10001;
+    display: none;
+    text-align: center;
+}
+body.dark-theme #loadingIndicator {
+    color: var(--viewer-text-dark);
+    background-color: rgba(40, 40, 40, 0.95);
+}
+
+/* Stili per il contenuto del libro (iniettati via JS) */
+/* Questi sono esempi, verranno generati da JS */
+/*
+.foliate-content-light body {
+    background-color: #FFFFFF !important;
+    color: #000000 !important;
+}
+.foliate-content-dark body {
+    background-color: #000000 !important;
+    color: #FFFFFF !important;
+}
+*/

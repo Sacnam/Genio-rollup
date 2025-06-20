@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Articles - Reader</title>
+    <!-- FontAwesome Locale -->
+    <link rel="stylesheet" href="../libs/fontawesome/css/all.min.css">
+    <link rel="stylesheet" href="reader.css">
+    <style>
+        .article-card.unread-feed-article .card-title-actions-row h3::before,
+        .feed-item-card.unread .article-card-title::before {
+            content: '●';
+            color: #3498db;
+            font-size: 1em;
+            margin-right: 8px;
+            line-height: 1;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <aside id="hamburger-menu" class="closed">
+            <div class="hamburger-menu-opened-content">
+                <div class="sidebar-header">
+                    <button class="icon-btn" id="sidebarHeaderHamburgerBtn" title="Toggle Menu">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                </div>
+                <nav class="sidebar-nav">
+                    <div class="nav-section main-pages-nav">
+                        <ul id="main-pages-list">
+                            <li data-filter-type="page" data-filter-value="homeAll" class="active-filter">
+                                <span>Home</span> <i class="fas fa-home"></i>
+                            </li>
+                            <li data-filter-type="page" data-filter-value="newFeeds">
+                                <span>New Feeds</span> <i class="fas fa-bell"></i>
+                            </li>
+                            <li data-filter-type="page" data-filter-value="readLater">
+                                <span>Read Later</span> <i class="fas fa-bookmark"></i>
+                            </li>
+                            <li data-filter-type="page" data-filter-value="favorites">
+                                <span>Favorites</span> <i class="fas fa-star"></i>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="nav-section feeds-nav-section">
+                        <button class="nav-section-toggle" id="feeds-section-toggle" aria-expanded="true" aria-controls="hamburger-feeds-list-wrapper">
+                            <i class="fas fa-chevron-down"></i>
+                            <span>FEEDS</span>
+                        </button>
+                        <div id="hamburger-feeds-list-wrapper" class="nav-section-content-wrapper">
+                            <ul id="hamburger-feeds-list" class="nav-section-content">
+                                <li class="empty-nav-item">No subscriptions.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </nav>
+            </div>
+        </aside>
+
+        <div id="reader-main-content">
+            <div id="reader-content-wrapper">
+                <div id="main-column">
+                    <header id="main-header">
+                        <button class="icon-btn" id="mainHeaderHamburgerBtn" title="Toggle Menu">
+                            <i class="fas fa-bars"></i>
+                        </button>
+                        <div class="search-wrapper">
+                            <div class="search-container">
+                                <i class="fas fa-search search-icon"></i>
+                                <input type="search" id="searchInput" placeholder="Search items...">
+                            </div>
+                        </div>
+                        <button class="icon-btn" id="sortFilterButton" title="Sort">
+                            <i class="fas fa-filter"></i>
+                        </button>
+                    </header>
+
+                    <nav id="quick-nav-header">
+                        <button class="quick-nav-btn active-filter" data-filter-type="page" data-filter-value="homeAll" title="Home">
+                            <i class="fas fa-home"></i> <span>Home</span>
+                        </button>
+                        <button class="quick-nav-btn" data-filter-type="page" data-filter-value="newFeeds" title="New Feeds">
+                            <i class="fas fa-bell"></i> <span>New Feeds</span>
+                        </button>
+                        <button class="quick-nav-btn" data-filter-type="page" data-filter-value="readLater" title="Read Later">
+                            <i class="fas fa-bookmark"></i> <span>Read Later</span>
+                        </button>
+                        <button class="quick-nav-btn" data-filter-type="page" data-filter-value="favorites" title="Favorites">
+                            <i class="fas fa-star"></i> <span>Favorites</span>
+                        </button>
+                    </nav>
+
+                    <main id="article-list-content">
+                        <div class="articles-container" id="articlesContainer">
+                        </div>
+                         <p class="empty-state-message" style="display:none;">No items to display.</p>
+                    </main>
+                </div>
+
+                <div id="resizer"></div>
+
+                <article id="reading-pane" class="collapsed">
+                    <div class="toolbar">
+                        <button class="icon-btn" id="closeArticleBtn" title="Close View">
+                            <i class="fas fa-times"></i>
+                        </button>
+                        <div class="toolbar-spacer"></div>
+
+                        <button class="icon-btn" id="refreshArticleBtn" title="Refresh Article Content">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+
+                        <button class="icon-btn" id="markAsFavoriteBtn" title="Add to Favorites">
+                            <i class="far fa-star"></i>
+                        </button>
+                        <button class="icon-btn" id="toggleReadLaterBtn" title="Add to Read Later">
+                            <i class="far fa-bookmark"></i>
+                        </button>
+                        <button class="icon-btn" id="deleteArticleReaderBtn" title="Delete">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+
+                        <div class="toolbar-divider"></div>
+
+                        <div class="appearance-menu-container">
+                            <button class="icon-btn" id="toggleAppearanceMenuBtn" title="Appearance Settings">
+                                <i class="fas fa-font"></i>
+                            </button>
+                            <div class="appearance-dropdown" id="appearanceDropdown">
+                                <div class="appearance-group">
+                                    <button class="icon-btn appearance-item-btn" id="decreaseFontBtn" title="Decrease Font"><i class="fas fa-font" style="font-size: 0.8em;"></i>-</button>
+                                    <span id="currentFontSizeLabel" class="toolbar-font-label appearance-item-label">16px</span>
+                                    <button class="icon-btn appearance-item-btn" id="increaseFontBtn" title="Increase Font"><i class="fas fa-font" style="font-size: 0.8em;"></i>+</button>
+                                </div>
+                                <div class="appearance-group">
+                                     <button class="icon-btn appearance-item-btn" id="themeToggleBtn" title="Toggle Theme"><i class="fas fa-moon"></i></button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="toolbar-divider"></div>
+
+                        <button class="icon-btn" id="toggleFullscreenReader" title="Fullscreen">
+                            <i class="fas fa-expand"></i>
+                        </button>
+                    </div>
+                    <div class="article-content-scroll-wrapper">
+                        <div class="article-header-container">
+                            <h2 id="articleViewTitle"></h2>
+                            <p class="original-url">
+                                <a id="articleViewLink" href="#" target="_blank" rel="noopener noreferrer">Read Original</a>
+                                <span id="articleViewDate"></span>
+                                <span id="articleViewReadTime"></span>
+                            </p>
+                        </div>
+                        <hr class="article-header-divider">
+                        <div class="article-body-container">
+                            <div id="articleContent"></div>
+                        </div>
+                    </div>
+                </article>
+            </div>
+        </div>
+    </div>
+
+    <!-- Librerie JS Locali -->
+    <script src="../libs/jszip.min.js"></script>
+    <script src="../libs/epub.min.js"></script>
+    <script src="../libs/marked.min.js"></script>
+
+    <!-- Firebase SDK Locali (versione compat) -->
+    <script src="../libs/firebase/firebase-app-compat.js"></script>
+    <script src="../libs/firebase/firebase-auth-compat.js"></script>
+    <script src="../libs/firebase/firebase-firestore-compat.js"></script>
+    <script src="../libs/firebase/firebase-functions-compat.js"></script>
+
+    <!-- Script locali specifici del reader -->
+    <script src="checklibs.js"></script>
+    <script src="reader.js"></script>
+</body>
+</html>

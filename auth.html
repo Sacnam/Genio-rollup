@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Genio - Authentication</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: #f7f7f7;
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    .card {
+      width: 100%;
+      max-width: 380px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      padding: 35px 30px;
+      margin: 0 20px;
+    }
+    .app-logo {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .app-logo h1 {
+      font-size: 2.2rem;
+      font-weight: 700;
+      color: #1a73e8;
+      margin: 0 0 10px 0;
+      letter-spacing: -0.5px;
+    }
+    .input-group {
+      margin-bottom: 22px;
+      position: relative;
+    }
+    .input-group label {
+      display: block;
+      margin-bottom: 10px;
+      font-size: 15px;
+      color: #5f6368;
+      font-weight: 500;
+    }
+    .input-group input {
+      width: 100%;
+      padding: 14px 45px 14px 18px;
+      font-size: 15px;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      outline: none;
+      box-sizing: border-box;
+      transition: all 0.2s;
+    }
+    .input-group input:focus {
+      border-color: #1a73e8;
+      box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.15);
+    }
+    .toggle-password {
+      position: absolute;
+      right: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      cursor: pointer;
+      color: #5f6368;
+      display: flex;
+      align-items: center;
+      height: 100%;
+      padding-top: 28px;
+      box-sizing: border-box;
+      transition: color 0.2s ease;
+    }
+    .toggle-password.active { color: #1a73e8; }
+    .toggle-password svg { width: 20px; height: 20px; fill: currentColor; }
+    .action-btn {
+      width: 100%;
+      padding: 15px;
+      background: #1a73e8;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 10px;
+    }
+    .action-btn:hover:not(:disabled) {
+      background: #1557b0;
+      transform: translateY(-1px);
+    }
+    .action-btn:disabled {
+      background: #9aa0a6;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .form-link {
+      font-size: 15px;
+      color: #5f6368;
+      text-align: center;
+      margin-top: 25px;
+    }
+    .form-link a {
+      color: #1a73e8;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .form-link a:hover { text-decoration: underline; }
+    .error-message {
+      color: #d93025;
+      font-size: 14px;
+      margin: 8px 0 0 2px;
+      display: none;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+  <div id="loginContainer" class="container">
+    <div class="card">
+      <div class="app-logo"><h1>Genio</h1></div>
+      <div class="input-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" placeholder="email@example.com">
+        <div class="error-message" id="emailError"></div>
+      </div>
+      <div class="input-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="••••••••">
+        <span class="toggle-password" data-target="password"><svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg></span>
+        <div class="error-message" id="passwordError"></div>
+      </div>
+      <button class="action-btn" id="loginBtn">Log In</button>
+      <div class="form-link">Don't have an account? <a href="#" id="showSignup">Sign Up</a></div>
+    </div>
+  </div>
+
+  <div id="signupContainer" class="container" style="display: none;">
+    <div class="card">
+      <div class="app-logo"><h1>Genio</h1></div>
+      <div class="input-group">
+        <label for="signupName">Full Name</label>
+        <input type="text" id="signupName" placeholder="Your Full Name">
+        <div class="error-message" id="nameError"></div>
+      </div>
+      <div class="input-group">
+        <label for="signupEmail">Email</label>
+        <input type="email" id="signupEmail" placeholder="email@example.com">
+        <div class="error-message" id="signupEmailError"></div>
+      </div>
+      <div class="input-group">
+        <label for="signupPassword">Password</label>
+        <input type="password" id="signupPassword" placeholder="••••••••">
+        <span class="toggle-password" data-target="signupPassword"><svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg></span>
+        <div class="error-message" id="signupPasswordError"></div>
+      </div>
+      <button class="action-btn" id="signupBtn">Sign Up</button>
+      <div class="form-link">Already have an account? <a href="#" id="showLogin">Log In</a></div>
+    </div>
+  </div>
+
+  <!-- Firebase SDK Locali (versione compat) -->
+  <script src="libs/firebase/firebase-app-compat.js"></script>
+  <script src="libs/firebase/firebase-auth-compat.js"></script>
+  <script src="libs/firebase/firebase-firestore-compat.js"></script>
+  
+  <!-- Nuovo script di autenticazione -->
+  <script src="auth.js"></script>
+</body>
+</html>

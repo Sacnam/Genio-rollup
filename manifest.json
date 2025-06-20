@@ -1,0 +1,80 @@
+{
+  "manifest_version": 3,
+  "name": "Genio Feed",
+  "version": "1.7.8",
+  "description": "Read-later, RSS Feeds & Ai Assistant",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "clipboardWrite",
+    "tabs",
+    "downloads",
+    "alarms",
+    "offscreen",
+    "scripting"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "360": "icons/logo67.png"
+  },
+  "action": {
+    "default_icon": {
+      "16": "icons/logo67.png"
+    },
+    "default_popup": "popup/popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "auth.html",
+        "icons/*",
+        "icons/img/*.png",
+        "icons/MaterialIcons-Regular.ttf",
+        "icons/MaterialIcons-Regular.woff",
+        "icons/MaterialIcons-Regular.woff2",
+        "sidebar/index.html",
+        "sidebar/coins.html",
+        "sidebar/manage_prompts.html",
+        "public/payment_success.html",
+        "public/payment_cancel.html",
+        "reader/reader.html",
+        "reader/reader.css",
+        "reader/reader.js",
+        "libs/*",
+        "libs/firebase/*",
+        "popup/turndown.js",
+        "popup/htmlToMarkdown_global.js",
+        "foliate-js/*",
+        "foliate-js/vendor/*",
+        "foliate-js/vendor/pdfjs/*",
+        "foliate-js/vendor/pdfjs/cmaps/*",
+        "foliate-js/vendor/pdfjs/standard_fonts/*",
+        "offscreen_parser.html",
+        "offscreen_parser.js"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self';",
+    "sandbox": "sandbox allow-scripts allow-forms allow-popups allow-modals; script-src 'self' 'unsafe-inline' 'unsafe-eval'; child-src 'self';"
+  }
+}
