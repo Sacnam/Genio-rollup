@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lettore Libro - Chatbot Genio</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="book_viewer.css"> <!-- Link al CSS esterno -->
+</head>
+<body>
+    <div id="loadingIndicator">Caricamento libro...</div>
+
+    <!-- Controlli in Alto -->
+    <div class="top-controls">
+        <button id="tocBtn" title="Indice dei Contenuti">
+            <i class="fas fa-list-ul"></i>
+        </button>
+        <div class="spacer"></div> <!-- Questo spingerà i prossimi pulsanti a destra -->
+        <button id="themeToggleBtn" title="Cambia Tema (Light/Dark)">
+            <i class="fas fa-moon"></i> <!-- L'icona cambierà via JS -->
+        </button>
+        <button id="scrollToggleBtn" title="Modalità Scorrimento/Paginazione">
+            <i class="fas fa-exchange-alt"></i> <!-- Esempio, puoi cambiarla -->
+        </button>
+        <button id="closeBookBtn" title="Chiudi Libro e torna alla libreria">
+            <i class="fas fa-times-circle"></i>
+        </button>
+    </div>
+
+    <!-- Pannello Laterale per l'Indice -->
+    <div id="tocPanel" class="sidebar-panel"> <!-- Inizialmente nascosto dal CSS (left: -350px) -->
+        <div class="panel-header">
+            <h3>Indice</h3>
+            <button id="closeTocPanelBtn" class="close-panel-btn" title="Chiudi Indice">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <ul id="tocList">
+            <!-- L'indice verrà popolato qui da JavaScript -->
+        </ul>
+    </div>
+
+    <!-- Elemento dove Foliate-JS renderizza il libro -->
+    <foliate-view id="foliateBookView"
+        flow="paginated" <!-- Valore iniziale, può essere cambiato da JS -->
+        margin="40"      <!-- Esempio di margine per header/footer in modalità paginata -->
+        gap="5"          <!-- Esempio di gap tra le colonne in % -->
+    ></foliate-view>
+
+    <!-- Controlli di Navigazione Pagina (in basso) -->
+    <!-- Questi saranno utili principalmente in modalità paginata -->
+    <div class="page-viewer-controls">
+        <button id="prevPageBtn" title="Pagina Precedente">
+            <i class="fas fa-chevron-left"></i>
+        </button>
+        <button id="nextPageBtn" title="Pagina Successiva">
+            <i class="fas fa-chevron-right"></i>
+        </button>
+    </div>
+
+    <!-- Script per la logica di questa pagina -->
+    <script type="module" src="book_viewer.js"></script>
+</body>
+</html>
