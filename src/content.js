@@ -24,18 +24,19 @@ let currentButtonsContainerMousedownListener = null;
 let currentButtonsContainerMouseOverListener = null;
 let currentButtonsContainerMouseOutListener = null;
 let currentButtonsContainerMouseUpListener = null;
+let currentButtonsContainerWheelListener = null; // Nuovo listener per lo scroll
 
-const STORAGE_KEY_CUSTOM_PROMPTS = 'userCustomPrompts';
+// Rimosso STORAGE_KEY_CUSTOM_PROMPTS, i prompt vengono ora dal background
 const STORAGE_KEY_FLOATING_UI_WIDTH = 'floatingUIWidth';
 
 // Dimensioni UI fluttuante (Floating UI)
 const DEFAULT_UI_WIDTH = 225;
-const ACTION_TOOLBAR_HEIGHT = 38;
-const CUSTOM_PROMPT_BUTTON_HEIGHT = 30;
+const ACTION_TOOLBAR_HEIGHT = 30; // RIDOTTO: da 38 a 30
+const CUSTOM_PROMPT_BUTTON_HEIGHT = 38; // AUMENTATO: da 30 a 38
 const PANEL_VERTICAL_PADDING = 5;
 
-const CUSTOM_PROMPT_AREA_HEIGHT = CUSTOM_PROMPT_BUTTON_HEIGHT + (PANEL_VERTICAL_PADDING * 2); // 40px
-const BASE_UI_HEIGHT = ACTION_TOOLBAR_HEIGHT + CUSTOM_PROMPT_AREA_HEIGHT; // 78px
+const CUSTOM_PROMPT_AREA_HEIGHT = CUSTOM_PROMPT_BUTTON_HEIGHT + (PANEL_VERTICAL_PADDING * 2); // 38 + (5 * 2) = 48px (era 40px)
+const BASE_UI_HEIGHT = ACTION_TOOLBAR_HEIGHT + CUSTOM_PROMPT_AREA_HEIGHT; // 30 + 48 = 78px (altezza totale invariata)
 
 const MIN_FLOATING_UI_WIDTH = 150;
 const MAX_FLOATING_UI_WIDTH = 400;
@@ -200,6 +201,7 @@ function attachButtonListeners(shadowRoot, useCustomPrompts) {
         if (currentButtonsContainerMouseOverListener) buttonsContainer.removeEventListener('mouseover', currentButtonsContainerMouseOverListener);
         if (currentButtonsContainerMouseOutListener) buttonsContainer.removeEventListener('mouseout', currentButtonsContainerMouseOutListener);
         if (currentButtonsContainerMouseUpListener) buttonsContainer.removeEventListener('mouseup', currentButtonsContainerMouseUpListener);
+        if (currentButtonsContainerWheelListener) buttonsContainer.removeEventListener('wheel', currentButtonsContainerWheelListener); // Rimuovi il listener wheel precedente
     }
 
     if (useCustomPrompts && buttonsContainer) {
@@ -271,6 +273,14 @@ function attachButtonListeners(shadowRoot, useCustomPrompts) {
         buttonsContainer.addEventListener('mouseover', currentButtonsContainerMouseOverListener);
         buttonsContainer.addEventListener('mouseout', currentButtonsContainerMouseOutListener);
         buttonsContainer.addEventListener('mouseup', currentButtonsContainerMouseUpListener);
+
+        // NUOVO: Listener per lo scorrimento orizzontale
+        currentButtonsContainerWheelListener = (e) => {
+            e.preventDefault(); // Impedisce lo scorrimento verticale della pagina
+            buttonsContainer.scrollLeft += e.deltaY; // Scorre orizzontalmente
+        };
+        buttonsContainer.addEventListener('wheel', currentButtonsContainerWheelListener);
+
 
         const addNewPromptInlineBtn = shadowRoot.querySelector('.add-new-prompt-inline-btn');
         if (addNewPromptInlineBtn) {
@@ -458,7 +468,7 @@ const handleSelection = (e) => {
                     if (floatingUI && document.body.contains(floatingUI)) {
                         document.body.removeChild(floatingUI); floatingUI = null;
                     }
-                    createFloatingUI(selectionRect);
+                    createFloatingUI(selectionRect); // Chiamata a createFloatingUI
                 }
             } else if (floatingUI && document.body.contains(floatingUI) && !isUIInteraction && !isResizingFloatingUI) {
                  const path = e.composedPath();
@@ -476,6 +486,7 @@ const handleSelection = (e) => {
     }
 };
 
+// MODIFICA CRITICA QUI: createFloatingUI ora è asincrona e ottiene i dati dal background
 const createFloatingUI = async (selectionRect) => {
     if (floatingUI && document.body.contains(floatingUI)) {
         document.body.removeChild(floatingUI);
@@ -488,13 +499,25 @@ const createFloatingUI = async (selectionRect) => {
     floatingUI.style.zIndex = '2147483647';
     floatingUI.style.overflow = 'hidden';
 
-    const savedWidth = await getFloatingUIWidth();
+    const shadow = floatingUI.attachShadow({ mode: 'open' });
+
+    // CHIEDIAMO I DATI AL BACKGROUND SCRIPT
+    const response = await chrome.runtime.sendMessage({ command: 'getFloatingUiData' });
+    if (chrome.runtime.lastError || !response || !response.success) {
+        console.error("Content.js: Could not get data from background script.", chrome.runtime.lastError?.message || response?.error);
+        removeFloatingUI();
+        return;
+    }
+
+    const { isLoggedIn, prompts, uiWidth, preferredLanguage } = response.data;
+    const customPrompts = isLoggedIn ? prompts : []; // Usa i prompt dal background
+    const savedWidth = uiWidth; // Usa la larghezza dal background
+    const savedLang = preferredLanguage; // Usa la lingua dal background
+
     floatingUI.style.width = `${savedWidth}px`;
     floatingUI.style.height = `${BASE_UI_HEIGHT}px`;
 
-    const shadow = floatingUI.attachShadow({ mode: 'open' });
-    let initialPrompts = await getStorageValue(STORAGE_KEY_CUSTOM_PROMPTS, []);
-    const { html: customPromptsAreaHtml, useCustom: initialUseCustomPrompts } = generateCustomPromptsAreaHtml(initialPrompts);
+    const { html: customPromptsAreaHtml, useCustom: initialUseCustomPrompts } = generateCustomPromptsAreaHtml(customPrompts);
 
     shadow.innerHTML = `
       <style>
@@ -560,21 +583,22 @@ const createFloatingUI = async (selectionRect) => {
             width: 100%;
             height: 100%;
             padding-bottom: 5px;
-            scrollbar-width: thin;
-            scrollbar-color: #cccccc #f0f0f0;
+            scrollbar-width: none; /* NUOVO: Per Firefox */
+            -ms-overflow-style: none; /* NUOVO: Per IE e Edge */
         }
-        .buttons-container::-webkit-scrollbar { height: 5px; }
-        .buttons-container::-webkit-scrollbar-track { background: #f0f0f0; border-radius: 3px; }
-        .buttons-container::-webkit-scrollbar-thumb { background: #cccccc; border-radius: 3px; }
-        .buttons-container::-webkit-scrollbar-thumb:hover { background: #aaaaaa; }
+        .buttons-container::-webkit-scrollbar {
+            width: 0px; /* NUOVO: Per WebKit (Chrome, Safari) */
+            height: 0px; /* NUOVO: Per WebKit (Chrome, Safari) */
+            display: none; /* NUOVO: Per WebKit (Chrome, Safari) */
+        }
 
         .action-btn { flex-shrink: 0; }
         .action-btn.custom-prompt-btn {
             padding: 2px 5px;
             font-size: 9px;
             min-width: 45px;
-            height: ${CUSTOM_PROMPT_BUTTON_HEIGHT}px;
-            max-height: ${CUSTOM_PROMPT_BUTTON_HEIGHT}px;
+            height: ${CUSTOM_PROMPT_BUTTON_HEIGHT}px; /* AGGIORNATO */
+            max-height: ${CUSTOM_PROMPT_BUTTON_HEIGHT}px; /* AGGIORNATO */
             border-radius: 4px;
             border-width: 1px;
             display: inline-flex;
@@ -667,7 +691,7 @@ const createFloatingUI = async (selectionRect) => {
         floatingUI.style.opacity = '1';
     });
 
-    const savedLang = await getPreferredLanguage();
+    // Usa savedLang ottenuto dal background
     const langSelect = shadow.querySelector('.target-lang');
     if (langSelect) langSelect.value = savedLang;
 
@@ -1071,17 +1095,8 @@ function sendToSidebar(command, data) {
     }
 }
 
-if (chrome.storage?.onChanged) {
-    chrome.storage.onChanged.addListener((changes, areaName) => {
-        if (areaName === 'local' && changes[STORAGE_KEY_CUSTOM_PROMPTS]) {
-            if (floatingUI && document.body.contains(floatingUI)) {
-                updateFloatingUIButtons(changes[STORAGE_KEY_CUSTOM_PROMPTS].newValue);
-            }
-        }
-    });
-} else {
-    console.warn("chrome.storage.onChanged API not available.");
-}
+// Rimosso il listener chrome.storage.onChanged per STORAGE_KEY_CUSTOM_PROMPTS
+// La UI fluttuante ora ottiene i prompt direttamente dal background ad ogni creazione.
 
 async function initializeSidebar() {
     if (!window.sidebarController || !document.getElementById('chatbot-sidebar')) {

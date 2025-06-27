@@ -1,4 +1,5 @@
 // File: sidebar/manage_prompts.js (Refactored for Manifest V3 - Message Passing)
+import Sortable from 'sortablejs';
 
 // --- DOM Elements ---
 let backButton, promptList, addPromptBtn, promptForm, formTitle, promptIdInput,

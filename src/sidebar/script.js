@@ -1,4 +1,4 @@
-// File: script.js (Refactored for Manifest V3 - Message Passing Architecture)
+// File: src/sidebar/script.js (Refactored for Smarter Chat Loader)
 
 // --- Color Helper Functions ---
 import { marked } from 'marked';
@@ -65,6 +65,8 @@ function updateUIForAuthState(isLoggedIn, userData) {
         mainChatContainer.style.display = 'flex';
         loginWall.style.display = 'none';
         setSendButtonState(true);
+        // Richiedi la cronologia della chat, il listener onMessage la gestirà
+        chrome.runtime.sendMessage({ command: 'getSidebarInitialData' });
     } else {
         currentUser = null;
         currentCoinBalance = 0;
@@ -99,16 +101,35 @@ function setSendButtonState(enabled) {
 }
 
 // --- Chat Functions ---
-function createMessageElement(content, type, isHtml = false) {
+function createMessageElement(content, type, isHtml = false, id = null) {
     if (!messagesContainer) return;
+
+    const existingLoader = messagesContainer.querySelector('.loading');
+    if (existingLoader) {
+        existingLoader.remove();
+    }
+
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${type}`;
+    if (id) {
+        messageDiv.id = id;
+    }
     if (isHtml) {
         messageDiv.innerHTML = content;
     } else {
         messageDiv.textContent = content;
     }
     messagesContainer.appendChild(messageDiv);
+    scrollToBottom();
+    return messageDiv;
+}
+
+function showLoadingIndicator() {
+    if (messagesContainer.querySelector('.loading')) return;
+    const loadingDiv = document.createElement('div');
+    loadingDiv.className = 'message incoming loading';
+    loadingDiv.innerHTML = `<div class="loading-dots"><span></span><span></span><span></span></div>`;
+    messagesContainer.appendChild(loadingDiv);
     scrollToBottom();
 }
 
@@ -128,27 +149,34 @@ function sendMessage() {
         return;
     }
 
-    const message = userInput.value.trim();
-    if (!message) return;
+    const messageText = userInput.value.trim();
+    if (!messageText) return;
 
-    setSendButtonState(false);
+    // Aggiornamento ottimistico della UI
+    createMessageElement(escapeHtml(messageText), 'outgoing');
+    showLoadingIndicator();
+
     const originalPlaceholder = userInput.placeholder;
-    userInput.placeholder = "Sending...";
+    userInput.value = '';
+    resetTextareaHeight();
+    setSendButtonState(false);
+    userInput.placeholder = "Processing...";
 
+    // Invia il messaggio al background
     chrome.runtime.sendMessage({
         command: 'sendChatMessage',
-        payload: { prompt: message }
+        payload: { prompt: messageText }
     }, (response) => {
-        if (response && response.success) {
-            userInput.value = '';
-            userInput.placeholder = originalPlaceholder;
-            resetTextareaHeight();
-            // The UI will be updated by the 'chatHistoryUpdate' message from the background
-        } else {
-            console.error('Error sending message:', response.error);
+        userInput.placeholder = originalPlaceholder;
+        setSendButtonState(true);
+        
+        if (!response || !response.success) {
+            console.error('Error sending message:', response?.error);
             alert("An error occurred while sending your message. Please try again.");
-            userInput.placeholder = originalPlaceholder;
-            setSendButtonState(true);
+            
+            const messages = messagesContainer.querySelectorAll('.message');
+            if(messages.length > 0) messages[messages.length - 1].remove();
+            if(messages.length > 1) messages[messages.length - 2].remove();
         }
     });
 }
@@ -271,7 +299,6 @@ function setupEventListeners() {
         });
     }
 
-    // Listener for messages from content scripts (e.g., prefill chat)
     window.addEventListener('message', (event) => {
         const { type, payload } = event.data;
         if (type === 'PREFILL_CHAT' && payload && typeof payload.text === 'string') {
@@ -285,18 +312,16 @@ function setupEventListeners() {
         }
     });
 
-    // Listener for updates from the background script
+    // ===============================================
+    // --- MODIFICA CHIAVE: Listener onMessage() ---
+    // ===============================================
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         const { command, payload } = message;
         switch (command) {
-            case 'sidebarDataUpdate': // This command is now deprecated by getSidebarInitialData's new behavior
-                // This case might still be useful if you have other specific updates
-                // that don't involve the full initial data load.
-                // For now, we'll rely on the initial load and chatHistoryUpdate.
-                break;
             case 'chatHistoryUpdate':
                 if (messagesContainer) {
-                    messagesContainer.innerHTML = '';
+                    messagesContainer.innerHTML = ''; // Pulisci e ridisegna tutto
+
                     if (payload.history.length === 0) {
                         createMessageElement("Start chatting by typing a message below!", 'incoming');
                     } else {
@@ -310,27 +335,40 @@ function setupEventListeners() {
                             }
                         });
                     }
-                    if (payload.isPending) {
-                        const loadingDiv = document.createElement('div');
-                        loadingDiv.className = 'message incoming loading';
-                        loadingDiv.innerHTML = `<div class="loading-dots"><span></span><span></span><span></span></div>`;
-                        messagesContainer.appendChild(loadingDiv);
+                    
+                    // --- NUOVA LOGICA PER IL LOADER ---
+                    // Controlla se l'ultimo messaggio è in attesa di una risposta.
+                    const lastMessage = payload.history[payload.history.length - 1];
+                    const isWaitingForResponse = lastMessage && lastMessage.prompt && !lastMessage.response && !lastMessage.chargeFailedReason;
+                    
+                    if (isWaitingForResponse) {
+                        showLoadingIndicator();
+                        setSendButtonState(false); // Mantieni disabilitato mentre si attende
+                        userInput.placeholder = "Genio is thinking...";
+                    } else {
+                        setSendButtonState(true); // Riabilita l'input se non si sta aspettando
+                        userInput.placeholder = "Write a message...";
                     }
+
                     scrollToBottom();
                 }
                 break;
-            case 'userDataUpdated': // Listen for user data changes (e.g., coins)
+            case 'userDataUpdated':
                 if (payload.user) {
+                    const wasNotLoggedIn = !currentUser;
                     currentUser = payload.user;
                     currentCoinBalance = payload.user.coins || 0;
-                    setSendButtonState(true); // Re-evaluate send button state based on new balance
+                    if(wasNotLoggedIn){
+                         updateUIForAuthState(true, currentUser);
+                    } else {
+                        setSendButtonState(true);
+                    }
                 } else {
-                    // User logged out
                     updateUIForAuthState(false, null);
                 }
                 break;
         }
-        return true; // Keep the message channel open for other listeners
+        return true;
     });
 }
 
@@ -341,7 +379,6 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
     setupTextareaResize();
 
-    // Request initial data from the background script
     chrome.runtime.sendMessage({ command: 'getSidebarInitialData' }, (response) => {
         if (chrome.runtime.lastError) {
             console.error("SIDEBAR ERRORE DI CONNESSIONE:", chrome.runtime.lastError.message);
@@ -350,16 +387,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         if (response && response.success) {
-            // La richiesta è andata a buon fine, ora controlliamo i dati
             const { isLoggedIn, user, prompts } = response.data;
-            
             updateUIForAuthState(isLoggedIn, user);
             if (isLoggedIn) {
                 loadCustomPrompts(prompts);
-                // La cronologia della chat verrà inviata tramite un messaggio separato ('chatHistoryUpdate')
             }
         } else {
-            // Questo blocco ora gestisce solo errori imprevisti dal background
             console.error("SIDEBAR ERRORE LOGICO:", response?.error);
             document.body.innerHTML = '<p style="color:red; padding:20px; text-align:center;">Error: Failed to load initial data from background.</p>';
         }

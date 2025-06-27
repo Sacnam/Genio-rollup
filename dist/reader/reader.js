@@ -623,35 +623,26 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function handleToggleFavorite() {
-        if (currentReadingItem && currentReadingItem.type === 'article' && currentUser) {
-            const newFavoriteState = !currentReadingItem.isFavorite;
-            chrome.runtime.sendMessage({ command: 'updateArticle', payload: { articleId: currentReadingItem.id, updates: { isFavorite: newFavoriteState } } }, (response) => {
-                if (response.success) {
-                    markAsFavoriteBtn.classList.toggle('active', newFavoriteState);
-                    markAsFavoriteBtn.querySelector('i').className = newFavoriteState ? 'fas fa-star' : 'far fa-star';
-                    markAsFavoriteBtn.title = newFavoriteState ? 'Remove Favorite' : 'Add to Favorites';
-                } else {
-                    console.error("Error updating favorite state:", response.error);
-                }
-            });
-        }
+    function handleToggleFavorite(article) {
+        if (!article || !currentUser) return;
+        const newFavoriteState = !article.isFavorite;
+        chrome.runtime.sendMessage({ command: 'updateArticle', payload: { articleId: article.id, updates: { isFavorite: newFavoriteState } } }, (response) => {
+            if (!response.success) {
+                console.error("Error updating favorite state:", response.error);
+                alert("Error updating favorite state.");
+            }
+        });
     }
 
-    function handleToggleReadLater() {
-        if (currentReadingItem && currentReadingItem.type === 'article' && currentUser) {
-            const newReadLaterState = !currentReadingItem.isReadLater;
-            chrome.runtime.sendMessage({ command: 'updateArticle', payload: { articleId: currentReadingItem.id, updates: { isReadLater: newReadLaterState } } }, (response) => {
-                if (response.success) {
-                    toggleReadLaterBtn.classList.toggle('active', newReadLaterState);
-                    toggleReadLaterBtn.querySelector('i').className = newReadLaterState ? 'fas fa-bookmark' : 'far fa-bookmark';
-                    toggleReadLaterBtn.title = newReadLaterState ? 'Remove from Read Later' : 'Add to Read Later';
-                    if (!newReadLaterState && currentFilter.type === 'page' && currentFilter.value === 'readLater') closeReadingPane();
-                } else {
-                    console.error("Error updating read later state:", response.error);
-                }
-            });
-        }
+    function handleToggleReadLater(article) {
+        if (!article || !currentUser) return;
+        const newReadLaterState = !article.isReadLater;
+        chrome.runtime.sendMessage({ command: 'updateArticle', payload: { articleId: article.id, updates: { isReadLater: newReadLaterState } } }, (response) => {
+            if (!response.success) {
+                console.error("Error updating read later state:", response.error);
+                alert("Error updating read later state.");
+            }
+        });
     }
 
     async function changeFontSize(delta) {
@@ -705,7 +696,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (refreshFeedsUiButton) {
             refreshFeedsUiButton.addEventListener('click', () => {
                 if (refreshFeedsUiButton.querySelector('i')) refreshFeedsUiButton.querySelector('i').classList.add('fa-spin');
-                chrome.runtime.sendMessage({ command: 'fetchAllFeeds', forceRefresh: true }, () => {
+                chrome.runtime.sendMessage({ command: 'fetchAllFeeds', payload: { forceRefresh: true } }, () => {
                     if (refreshFeedsUiButton.querySelector('i')) refreshFeedsUiButton.querySelector('i').classList.remove('fa-spin');
                 });
             });
@@ -913,8 +904,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (itemType === 'article' && currentUser) {
                     const articleForAction = displayedItems.find(item => item.id === itemId && item.type === 'article');
                     if (articleForAction) {
-                        if (action === 'toggle-favorite') handleToggleFavorite();
-                        else if (action === 'toggle-read-later-card') handleToggleReadLater();
+                        if (action === 'toggle-favorite') handleToggleFavorite(articleForAction);
+                        else if (action === 'toggle-read-later-card') handleToggleReadLater(articleForAction);
                         else if (action === 'delete') handleDeleteArticle(itemId);
                     }
                 } else if (itemType === 'feedItem' && action === 'open-external') {
@@ -941,8 +932,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (refreshArticleBtn) refreshArticleBtn.addEventListener('click', () => { if (currentReadingItem) { const icon = refreshArticleBtn.querySelector('i'); if (icon) icon.classList.add('fa-spin'); showArticleUI(currentReadingItem, true).finally(() => { if (icon) icon.classList.remove('fa-spin'); }); } });
     if (toggleAppearanceMenuBtn && appearanceDropdown) { toggleAppearanceMenuBtn.addEventListener('click', (e) => { e.stopPropagation(); appearanceDropdown.classList.toggle('visible'); }); document.addEventListener('click', (e) => { if (!appearanceDropdown.contains(e.target) && !toggleAppearanceMenuBtn.contains(e.target)) appearanceDropdown.classList.remove('visible'); }); }
     if (toggleFullscreenReaderBtn) toggleFullscreenReaderBtn.addEventListener('click', toggleReaderFullscreen);
-    if (markAsFavoriteBtn) markAsFavoriteBtn.addEventListener('click', handleToggleFavorite);
-    if (toggleReadLaterBtn) toggleReadLaterBtn.addEventListener('click', handleToggleReadLater);
+    if (markAsFavoriteBtn) markAsFavoriteBtn.addEventListener('click', () => handleToggleFavorite(currentReadingItem));
+    if (toggleReadLaterBtn) toggleReadLaterBtn.addEventListener('click', () => handleToggleReadLater(currentReadingItem));
     if (deleteArticleReaderBtn) deleteArticleReaderBtn.addEventListener('click', () => { if (currentReadingItem && currentReadingItem.type === 'article') handleDeleteArticle(currentReadingItem.id); });
     if (decreaseFontBtn) decreaseFontBtn.addEventListener('click', () => changeFontSize(-1));
     if (increaseFontBtn) increaseFontBtn.addEventListener('click', () => changeFontSize(1));

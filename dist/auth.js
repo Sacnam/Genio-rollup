@@ -1,5 +1,5 @@
 // File: auth.js (Refactored for Manifest V3 - Message Passing)
-
+//stranezzegit commit -m "Il tuo messaggio di commit"
 // DOM elements
 const elements = {
     login: {
