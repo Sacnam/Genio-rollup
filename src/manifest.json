@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Genio Feed",
-  "version": "1.7.8",
+  "version": "1.7.9",
   "description": "Read-later, RSS Feeds & Ai Assistant",
   "permissions": [
     "storage",
@@ -21,11 +21,14 @@
     "type": "module"
   },
   "icons": {
-    "360": "icons/logo67.png"
+    "16": "icons/logo67.png",
+    "48": "icons/logo67.png",
+    "128": "icons/logo67.png"
   },
   "action": {
     "default_icon": {
-      "16": "icons/logo67.png"
+      "16": "icons/logo67.png",
+      "48": "icons/logo67.png"
     },
     "default_popup": "popup/popup.html"
   },
@@ -44,16 +47,12 @@
     {
       "resources": [
         "auth.html",
-        "sidebar/index.html",
-        "sidebar/coins.html",
-        "sidebar/manage_prompts.html",
-        "reader/reader.html",
-        "reader/reader.css",
+        "sidebar/*",
+        "reader/*",
         "offscreen_parser.html",
         "public/*",
         "icons/*",
-        "libs/*",
-        "foliate-js/*"
+        "libs/*"
       ],
       "matches": [
         "<all_urls>"
@@ -61,7 +60,6 @@
     }
   ],
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self';",
-    "sandbox": "sandbox allow-scripts allow-forms allow-popups allow-modals; script-src 'self' 'unsafe-inline' 'unsafe-eval'; child-src 'self';"
+    "extension_pages": "script-src 'self'; object-src 'self';"
   }
 }

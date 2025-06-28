@@ -1,4 +1,7 @@
-// offscreen_parser.js
+import { R as Readability } from './chunks/Readability.js';
+
+// src/offscreen_parser.js
+
 console.log("Offscreen document script loaded. Readability:", typeof Readability);
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -7,7 +10,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
 
     if (request.action === "parseXmlFeed") {
-        // ... (codice per parseXmlFeed rimane invariato, come te l'ho dato prima) ...
         console.log("Offscreen: Ricevuta richiesta parseXmlFeed per URL:", request.feedUrl);
         try {
             const parser = new DOMParser();
@@ -16,7 +18,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             const parserErrorNode = xmlDoc.querySelector('parsererror');
             if (parserErrorNode) {
                 console.error("Offscreen: Errore parsing XML:", parserErrorNode.textContent);
-                sendResponse({ error: `XML Parsing Error: ${parserErrorNode.textContent}` });
+                sendResponse({ success: false, error: `XML Parsing Error: ${parserErrorNode.textContent}` });
                 return true;
             }
 
@@ -26,7 +28,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             const feedBaseUrl = request.feedUrl;
 
             xmlDoc.querySelectorAll(itemsSelector).forEach(itemNode => {
-                const title = itemNode.querySelector("title")?.textContent?.trim() || "No Title";
+                const getText = (selector) => itemNode.querySelector(selector)?.textContent.trim() || '';
                 let link = itemNode.querySelector("link[href]")?.getAttribute('href') || itemNode.querySelector("link")?.textContent?.trim();
                 let guid = itemNode.querySelector("guid")?.textContent?.trim();
 
@@ -70,7 +72,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
                 items.push({
                     id: itemId,
-                    title: title,
+                    title: getText("title") || "No Title",
                     link: link,
                     pubDate: pubDate,
                     description: description,
@@ -80,7 +82,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             sendResponse({ success: true, items: items });
         } catch (e) {
             console.error("Offscreen: Eccezione durante il parsing XML:", e);
-            sendResponse({ error: e.toString() });
+            sendResponse({ success: false, error: e.toString() });
         }
         return true;
 
@@ -96,7 +98,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             let baseEl = doc.querySelector('base[href]');
             if (!baseEl) {
                 baseEl = doc.createElement('base');
-                baseEl.setAttribute('href', request.pageUrl); // Usa l'URL della pagina originale come base
+                baseEl.setAttribute('href', request.pageUrl);
                 doc.head.appendChild(baseEl);
             }
 
@@ -113,8 +115,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                         excerpt: readerArticle.excerpt,
                         byline: readerArticle.byline,
                         siteName: readerArticle.siteName,
-                        // L'estrazione dell'immagine principale potrebbe essere fatta qui o nel background
-                        // Per semplicità, la lasciamo nel background per ora, ma potrebbe essere più efficiente qui.
                     }
                 });
             } else {

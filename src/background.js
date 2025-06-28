@@ -1,4 +1,4 @@
-// src/background.js (Versione Finale Stabile con TUTTI i comandi)
+// src/background.js (Versione Finale Stabile con FIX per Offscreen/DOMParser)
 
 // =================================================
 // SEZIONE 1: IMPORT
@@ -32,6 +32,7 @@ import {
     onSnapshot
 } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
+// Readability non è più usato direttamente qui, ma nell'offscreen document.
 import { Readability } from './libs/Readability.js';
 
 console.log("BG DEBUG 1: Moduli importati.");
@@ -123,7 +124,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     const user = userCredential.user;
                     await updateProfile(user, { displayName: request.payload.name });
                     const userRef = doc(fbDb, 'users', user.uid);
-                    await setDoc(userRef, { name: request.payload.name, email: request.payload.email, coins: 50, createdAt: serverTimestamp(), status: 'active', lastLogin: serverTimestamp() });
+                    await setDoc(userRef, { name: request.payload.name, email: user.email, coins: 50, createdAt: serverTimestamp(), status: 'active', lastLogin: serverTimestamp() });
                 }
                 response = { success: true };
             } catch (error) {
@@ -312,9 +313,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
                 // --- TTS ---
                 case 'generateSpeech':
-                    // Qui andrebbe la logica per chiamare l'API TTS
-                    // Per ora, simuliamo una risposta
-                    responseData.audioUrl = "URL_AUDIO_FITTIZIO";
+                    const generateSpeechCallable = httpsCallable(fbFunctions, 'generateSpeech');
+                    const result = await generateSpeechCallable({ text: request.payload.text, voice: request.payload.voice });
+                    responseData.audioUrl = result.data.audioUrl;
                     operationSuccessful = true;
                     break;
 
@@ -415,25 +416,37 @@ function mapAuthError(errorCode) {
     return errorMap[errorCode] || 'An unknown error occurred.';
 }
 
-// --- Offscreen Document & Parsing ---
+// --- Offscreen Document & Parsing (FIXED FOR MV3) ---
 const OFFSCREEN_DOCUMENT_PATH = 'offscreen_parser.html';
 let creatingOffscreenPromise = null;
 
 async function hasOffscreenDocument() {
-    if (typeof clients === 'undefined' || !clients.matchAll) return false;
-    const offscreenUrl = chrome.runtime.getURL(OFFSCREEN_DOCUMENT_PATH);
-    const allClients = await clients.matchAll({ includeUncontrolled: true, type: 'offscreen' });
-    return allClients.some(client => client.url === offscreenUrl);
+    if (chrome.runtime.getContexts) {
+        const contexts = await chrome.runtime.getContexts({
+            contextTypes: ['OFFSCREEN_DOCUMENT']
+        });
+        return contexts.length > 0;
+    } else {
+        const offscreenUrl = chrome.runtime.getURL(OFFSCREEN_DOCUMENT_PATH);
+        const allClients = await clients.matchAll({ includeUncontrolled: true });
+        return allClients.some(client => client.url === offscreenUrl);
+    }
 }
 
 async function createOffscreenDocumentIfNeeded() {
-    if (await hasOffscreenDocument()) return;
-    if (creatingOffscreenPromise) return creatingOffscreenPromise;
+    if (await hasOffscreenDocument()) {
+        return;
+    }
+    if (creatingOffscreenPromise) {
+        return creatingOffscreenPromise;
+    }
     creatingOffscreenPromise = chrome.offscreen.createDocument({
         url: OFFSCREEN_DOCUMENT_PATH,
         reasons: [chrome.offscreen.Reason.DOM_PARSER],
-        justification: 'Parsing XML for RSS feeds',
-    }).finally(() => { creatingOffscreenPromise = null; });
+        justification: 'Parsing XML and HTML content',
+    }).finally(() => {
+        creatingOffscreenPromise = null;
+    });
     return creatingOffscreenPromise;
 }
 
@@ -468,49 +481,34 @@ async function getStorageValue(key, defaultValue) {
 
 async function updateExtensionBadge() { /* ... la tua logica per il badge ... */ }
 
+// MODIFICATO: Ora delega il parsing HTML all'offscreen document
 async function fetchAndParseWithReadability(url) {
     try {
         const response = await fetch(url, { mode: 'cors', signal: AbortSignal.timeout(25000) });
         if (!response.ok) throw new Error(`HTTP error ${response.status} for ${url}`);
         const htmlContent = await response.text();
         
-        let parsedDocForReadability;
-        try {
-            parsedDocForReadability = new DOMParser().parseFromString(htmlContent, "text/html");
-        } catch (e) {
-             console.error("BG: DOMParser failed:", e);
-             return { success: false, error: "DOMParser failed in Service Worker." };
-        }
-
-        let baseEl = parsedDocForReadability.querySelector('base[href]');
-        if (!baseEl) { baseEl = parsedDocForReadability.createElement('base'); baseEl.setAttribute('href', url); parsedDocForReadability.head.appendChild(baseEl); }
-
-        if (typeof Readability === 'undefined') {
-            console.error("BG: Readability library not loaded!");
-            throw new Error("Readability library not available in background.");
-        }
-
-        const readerArticle = new Readability(parsedDocForReadability.cloneNode(true), { charThreshold: 250, nTopCandidates: 5 }).parse();
-        if (readerArticle && readerArticle.content) {
-            return {
-                success: true,
-                article: {
-                    title: readerArticle.title || "Untitled",
-                    content: readerArticle.content,
-                    textContent: readerArticle.textContent,
-                    length: readerArticle.length,
-                    excerpt: readerArticle.excerpt,
-                    byline: readerArticle.byline,
-                    siteName: readerArticle.siteName,
-                    image: readerArticle.image,
-                    banner: readerArticle.banner
+        await createOffscreenDocumentIfNeeded();
+        return new Promise((resolve, reject) => {
+            const timeoutId = setTimeout(() => reject(new Error(`Timeout parsing HTML with Readability for: ${url}`)), 20000);
+            // CORRETTO: Usa l'azione 'extractArticleWithReadability' che il tuo offscreen_parser si aspetta
+            chrome.runtime.sendMessage({
+                target: 'offscreen_document_rss_parser',
+                action: "extractArticleWithReadability", 
+                htmlContent: htmlContent,
+                pageUrl: url
+            }, (response) => {
+                clearTimeout(timeoutId);
+                if (chrome.runtime.lastError || !response) {
+                    reject(new Error(chrome.runtime.lastError?.message || "Unknown error from offscreen document during HTML parsing."));
+                } else {
+                    resolve(response);
                 }
-            };
-        } else {
-            return { success: false, error: "Readability could not parse content for promotion." };
-        }
+            });
+        });
+
     } catch (error) {
-        console.error(`BG: (Readability) Error during promotion fetch for ${url}:`, error);
+        console.error(`BG: (Readability) Error during fetch for ${url}:`, error);
         return { success: false, error: error.message };
     }
 }

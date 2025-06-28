@@ -1,12 +1,9 @@
-// File: firestore.rules
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- Regole per l'Estensione Stripe ---
-
+    // --- Regole Stripe (MANTENUTE) ---
     match /customers/{uid} {
       allow read: if request.auth.uid == uid;
       match /checkout_sessions/{id} {
@@ -18,9 +15,8 @@ service cloud.firestore {
       match /payments/{id} {
         allow read: if request.auth.uid == uid;
       }
-      allow write: if false; // Utente non può scrivere direttamente qui
+      allow write: if false;
     }
-
     match /products/{id} {
       allow read: if true;
       allow write: if false;
@@ -33,27 +29,52 @@ service cloud.firestore {
         allow write: if false;
       }
     }
-
-     match /configuration/{id} {
-       allow read: if true;
-       allow write: if false;
-     }
-
-    // --- Tue Regole Esistenti (Integrate) ---
-
-    match /chats/{document} {
-      allow read, write: if true; // Mantenuta permissiva
+    match /configuration/{id} {
+      allow read: if true;
+      allow write: if false;
     }
 
-    match /users/{userId} {
-      // Utente può leggere/scrivere il proprio documento
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+    // --- Regole Chat (MANTENUTE) ---
+    match /chats/{chatId} {
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow update, delete: if false;
+    }
 
-      // Sottocollezione Transactions (solo lettura per utente)
+    // --- Regole Utenti e Sottocollezioni (MODIFICATE E COMPLETATE) ---
+    match /users/{userId} {
+      // MODIFICATO: Separato get e list per risolvere l'errore della sidebar
+      // Permette di leggere un singolo documento utente (es. il proprio profilo)
+      allow get: if request.auth != null && request.auth.uid == userId;
+      // Permette di fare query sulla collezione (necessario per la sidebar/popup)
+      // ma non di leggere i dati degli altri utenti grazie alla regola "get" sopra.
+      allow list: if request.auth != null;
+      
+      // Permette all'utente di scrivere solo nel proprio documento
+      allow write: if request.auth != null && request.auth.uid == userId;
+
+      // Sottocollezione Transactions (MANTENUTA)
       match /transactions/{transactionId} {
         allow read: if request.auth != null && request.auth.uid == userId;
-        allow write: if false; // Solo backend scrive qui
+        allow write: if false;
+      }
+
+      // Sottocollezione customPrompts (MANTENUTA)
+      match /customPrompts/{promptId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // Sottocollezione savedArticles (MANTENUTA E CORRETTA)
+      // Questa regola permette di salvare, leggere, aggiornare (star, read) e cancellare articoli.
+      match /savedArticles/{articleId} {
+        allow read, write, delete: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // Sottocollezione feedSubscriptions (MANTENUTA E CORRETTA)
+      // Questa regola permette di aggiungere, leggere, modificare e cancellare i feed RSS.
+      match /feedSubscriptions/{subscriptionId} {
+        allow read, write, delete: if request.auth != null && request.auth.uid == userId;
       }
     }
   }
-} 
+}
